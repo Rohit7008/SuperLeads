@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { CommandPalette } from "@/components/CommandPalette";
 import { Inter } from "next/font/google";
 import { Metadata } from "next";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className="antialiased font-sans">
         <Providers>
+          <CommandPalette />
           {children}
         </Providers>
       </body>

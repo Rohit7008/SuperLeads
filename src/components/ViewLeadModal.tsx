@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lead } from "@/lib/leads";
+import { Lead, LeadRow, getClientDetails } from "@/lib/leads";
 import { getUsers, User } from "@/lib/users";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Phone, User as UserIcon, Users, Clock, FileText, X, Trash2, CheckCircle2 } from "lucide-react";
+import { Calendar, Phone, Users, Clock, FileText, X, Trash2 } from "lucide-react";
 
 export default function ViewLeadModal({
     lead,
@@ -14,28 +14,35 @@ export default function ViewLeadModal({
     onEdit,
     onDelete,
 }: {
-    lead: Lead;
+    lead: LeadRow;
     onClose: () => void;
     onEdit: () => void;
     onDelete?: (id: number) => void;
 }) {
+    const [fullLead, setFullLead] = useState<Lead | null>(null);
     const [creatorName, setCreatorName] = useState<string>("Loading...");
     const [users, setUsers] = useState<User[]>([]);
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const usersData = await getUsers();
+                const [usersData, clientData] = await Promise.all([
+                    getUsers(),
+                    getClientDetails(lead.lead_id.toString())
+                ]);
                 setUsers(usersData);
-                const creator = usersData.find(u => u.id === (lead.created_by as any));
-                setCreatorName(creator ? creator.name : `Unknown (ID: ${lead.created_by})`);
+                setFullLead(clientData);
+
+                const creatorId = clientData.created_by;
+                const creator = usersData.find(u => u.id === creatorId);
+                setCreatorName(creator ? creator.name : (creatorId ? `Unknown` : 'System'));
             } catch (err) {
-                console.error("Failed to load users", err);
-                setCreatorName(`User ID: ${lead.created_by}`);
+                console.error("Failed to load details", err);
+                setCreatorName(`Unknown`);
             }
         };
         loadData();
-    }, [lead.created_by]);
+    }, [lead.lead_id]);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return "Not set";
@@ -46,10 +53,10 @@ export default function ViewLeadModal({
     };
 
     const getAgentNames = () => {
-        if (!lead.agent_ids || lead.agent_ids.length === 0) return "None";
-        if (users.length === 0) return lead.agent_ids.join(", "); // Fallback if users not loaded
+        if (!fullLead || !fullLead.agent_ids || fullLead.agent_ids.length === 0) return "None";
+        if (users.length === 0) return fullLead.agent_ids.join(", ");
 
-        return lead.agent_ids.map(id => {
+        return fullLead.agent_ids.map((id: string) => {
             const agent = users.find(u => u.id === id);
             return agent ? agent.name : `ID: ${id}`;
         }).join(", ");
@@ -61,12 +68,12 @@ export default function ViewLeadModal({
                 <div className="p-6 space-y-6">
                     <div className="px-10 py-8 border-b border-border flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight text-foreground">{lead.name}</h2>
+                            <h2 className="text-3xl font-bold tracking-tight text-foreground">{lead.client_name}</h2>
                             <div className="flex items-center gap-3 mt-2">
                                 <Badge variant="secondary" className="font-bold text-[10px] uppercase tracking-widest px-3">
-                                    {lead.service}
+                                    {lead.service_name}
                                 </Badge>
-                                {lead.is_converted && (
+                                {(lead.status === 'Closed') && ( // Use status=Closed instead of is_converted
                                     <Badge className="font-bold text-[10px] uppercase tracking-widest px-3 bg-emerald-500 text-white border-none">
                                         Converted
                                     </Badge>
@@ -92,7 +99,7 @@ export default function ViewLeadModal({
                                     <label className="text-[10px] font-bold uppercase tracking-[0.3em] flex items-center gap-3 text-muted-foreground/60">
                                         <Calendar className="w-4 h-4 opacity-60" /> Initial Consultation
                                     </label>
-                                    <p className="text-xl font-bold tracking-tight pl-1">{formatDate(lead.date || lead.meeting_date)}</p>
+                                    <p className="text-xl font-bold tracking-tight pl-1">{formatDate(lead.discussion_date)}</p>
                                 </div>
                             </div>
 
@@ -102,7 +109,7 @@ export default function ViewLeadModal({
                                         <Clock className="w-4 h-4 opacity-60" /> Next Follow-up
                                     </label>
                                     <p className="text-xl font-bold tracking-tight pl-1">
-                                        {lead.is_converted ? "CONVERTED" : formatDate(lead.follow_up_date)}
+                                        {lead.status === 'Closed' ? "CONVERTED" : formatDate(lead.follow_up_date)}
                                     </p>
                                 </div>
 
@@ -122,13 +129,13 @@ export default function ViewLeadModal({
                                 <FileText className="w-4 h-4 opacity-60" /> Account Overview
                             </label>
                             <div className="bg-zinc-50 dark:bg-zinc-900 border border-border/50 rounded-2xl p-8 text-lg font-medium tracking-tight whitespace-pre-wrap min-h-[140px]">
-                                {lead.description || "No description provided."}
+                                {fullLead?.description || "No description provided."}
                             </div>
                         </div>
 
                         <div className="mt-10 flex items-center justify-between opacity-30">
                             <span className="h-px flex-1 bg-border" />
-                            <p className="text-[9px] font-bold uppercase tracking-[0.3em] px-4">Client ID: {lead.id} / Advisor: {creatorName}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-[0.3em] px-4">Client ID: {lead.lead_id} / Service ID: {lead.service_id}</p>
                             <span className="h-px flex-1 bg-border" />
                         </div>
                     </div>
@@ -142,11 +149,10 @@ export default function ViewLeadModal({
                         <Button
                             variant="outline"
                             onClick={() => {
-                                if (window.confirm("Are you sure?")) {
-                                    onClose();
-                                    onDelete(lead.id);
-                                }
-                            }}
+                                onClose();
+                                onDelete(lead.lead_id); // Use lead_id
+                            }
+                            }
                             className="h-12 px-6 rounded-xl font-bold border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/40 transition-all order-2 flex items-center gap-2"
                         >
                             <Trash2 className="w-4 h-4" /> Delete Lead
@@ -156,7 +162,7 @@ export default function ViewLeadModal({
                         Edit Details
                     </Button>
                 </div>
-            </Card>
-        </div>
+            </Card >
+        </div >
     );
 }

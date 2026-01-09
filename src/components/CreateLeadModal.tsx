@@ -7,19 +7,19 @@ import { getUsers } from "@/lib/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/Badge";
+
 import { DateTimePicker } from "./DateTimePicker";
 import { cn } from "@/lib/utils";
 import { User, Phone, Loader2, CheckSquare, Square } from "lucide-react";
 import { SERVICE_LIST } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/components/ui/sheet";
 
 export default function CreateLeadModal({
@@ -66,23 +66,13 @@ export default function CreateLeadModal({
     mutation.mutate({
       name: form.name,
       phone_number: form.phone_number,
-      service: form.services.join(", "),
+      service_name: form.services.join(", "),
       description: form.description || undefined,
-      meeting_date: form.meeting_date || undefined,
+      discussion_date: form.meeting_date || undefined,
       follow_up_date: form.is_converted ? undefined : (form.follow_up_date || undefined),
       agent_ids: form.agent_ids,
       is_converted: form.is_converted,
       created_by_name: user?.user_metadata?.name || user?.name || user?.email || 'User',
-    });
-  };
-
-
-  const toggleService = (service: string) => {
-    setForm((prev: any) => {
-      const services = prev.services.includes(service)
-        ? prev.services.filter((s: string) => s !== service)
-        : [...prev.services, service];
-      return { ...prev, services };
     });
   };
 
@@ -120,7 +110,7 @@ export default function CreateLeadModal({
                   <Input
                     id="name"
                     placeholder="Full Name"
-                    className="pl-9 h-10 border-border bg-zinc-50 dark:bg-zinc-900/50 rounded-md text-sm font-medium focus:ring-1 focus:ring-primary/20 transition-all shadow-none"
+                    className="pl-9 h-10 border-border bg-zinc-50 dark:bg-zinc-900/50 rounded-md text-sm font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     value={form.name}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, name: e.target.value })}
                     required
@@ -137,7 +127,7 @@ export default function CreateLeadModal({
                   <Input
                     id="phone"
                     placeholder="+1 (555) 000-0000"
-                    className="pl-9 h-10 border-border bg-zinc-50 dark:bg-zinc-900/50 rounded-md text-sm font-medium focus:ring-1 focus:ring-primary/20 transition-all shadow-none"
+                    className="pl-9 h-10 border-border bg-zinc-50 dark:bg-zinc-900/50 rounded-md text-sm font-medium shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     value={form.phone_number}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const value = e.target.value;
@@ -158,23 +148,12 @@ export default function CreateLeadModal({
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-0.5">
                 Services
               </Label>
-              <div className="flex flex-wrap gap-1.5 p-2 rounded-md bg-zinc-50 dark:bg-zinc-900/50 border border-border/50">
-                {SERVICE_LIST.map((service: string) => (
-                  <Badge
-                    key={service}
-                    variant={form.services.includes(service) ? "default" : "outline"}
-                    className={cn(
-                      "cursor-pointer text-[10px] font-bold px-2 py-0.5 rounded transition-all",
-                      form.services.includes(service)
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-transparent text-muted-foreground hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                    )}
-                    onClick={() => toggleService(service)}
-                  >
-                    {service}
-                  </Badge>
-                ))}
-              </div>
+              <MultiSelect
+                options={SERVICE_LIST as any}
+                selected={form.services}
+                onChange={(s) => setForm({ ...form, services: s })}
+                placeholder="Select services..."
+              />
             </div>
 
             <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-md border border-border/50 flex items-center justify-between">
@@ -205,7 +184,7 @@ export default function CreateLeadModal({
               <textarea
                 id="desc"
                 placeholder="Notes and financial context..."
-                className="flex w-full rounded-md border border-border bg-zinc-50 dark:bg-zinc-900/50 px-4 py-3 text-sm font-medium text-foreground focus:ring-1 focus:ring-primary/20 transition-all min-h-[80px] outline-none placeholder:text-muted-foreground/40 resize-none shadow-none"
+                className="flex w-full rounded-md border border-border bg-zinc-50 dark:bg-zinc-900/50 px-4 py-3 text-sm font-medium text-foreground min-h-[80px] outline-none placeholder:text-muted-foreground/40 resize-none shadow-none focus:ring-0"
                 value={form.description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, description: e.target.value })}
               />
@@ -219,19 +198,19 @@ export default function CreateLeadModal({
                 <div className="overflow-hidden">
                   <DateTimePicker
                     value={form.meeting_date}
-                    onChange={(date: string) => setForm({ ...form, meeting_date: date })}
+                    onChange={(date: Date) => setForm({ ...form, meeting_date: date.toISOString() })}
                   />
                 </div>
               </div>
               {!form.is_converted && (
                 <div className="space-y-1.5">
-                  <Label className="text-[10px) font-bold uppercase tracking-widest text-muted-foreground ml-0.5">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-0.5">
                     Follow-up Schedule
                   </Label>
                   <div className="overflow-hidden">
                     <DateTimePicker
                       value={form.follow_up_date}
-                      onChange={(date: string) => setForm({ ...form, follow_up_date: date })}
+                      onChange={(date: Date) => setForm({ ...form, follow_up_date: date.toISOString() })}
                     />
                   </div>
                 </div>

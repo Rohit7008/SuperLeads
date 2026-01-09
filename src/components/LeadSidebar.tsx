@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lead, getLeadUpdates, LeadUpdate } from "@/lib/leads";
+import { LeadRow, getLeadUpdates, LeadUpdate } from "@/lib/leads"; // Updated Import
 import { getUsers, User } from "@/lib/users";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
@@ -17,14 +17,15 @@ import {
     X,
     TrendingUp,
     History,
-    CheckCircle2
+    CheckCircle2,
+    Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeadSidebarProps {
-    lead: Lead;
+    lead: LeadRow;
     onClose: () => void;
-    onEdit: (lead: Lead) => void;
+    onEdit: (lead: LeadRow) => void;
 }
 
 export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps) {
@@ -37,9 +38,10 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
         const loadData = async () => {
             setLoadingUpdates(true);
             try {
+                // Fetch updates for the CLIENT (lead_id)
                 const [updatesData, usersData] = await Promise.all([
-                    getLeadUpdates(lead.id.toString()),
-                    getUsers()
+                    getLeadUpdates(lead.lead_id.toString()),
+                    getUsers() // Still fetching users for agent names if needed in logs
                 ]);
                 setUpdates(updatesData);
                 setUsers(usersData);
@@ -50,7 +52,7 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
             }
         };
         loadData();
-    }, [lead.id]);
+    }, [lead.lead_id]);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return "NOT SET";
@@ -62,14 +64,6 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
             hour: '2-digit',
             minute: '2-digit'
         }).toUpperCase();
-    };
-
-    const getAgentNames = () => {
-        if (!lead.agent_ids || lead.agent_ids.length === 0) return "NONE ASSIGNED";
-        return lead.agent_ids.map(id => {
-            const agent = users.find(u => u.id === id);
-            return agent ? agent.name.toUpperCase() : `ID: ${id}`;
-        }).join(", ");
     };
 
     return (
@@ -86,7 +80,11 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                 <div className="p-8 pb-6 border-b border-border/60 flex flex-col gap-4">
                     <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                            <h2 className="text-4xl font-black tracking-tighter text-foreground uppercase leading-none">{lead.name}</h2>
+                            <h2 className="text-4xl font-black tracking-tighter text-foreground uppercase leading-none">{lead.client_name}</h2>
+                            <div className="flex items-center gap-2 text-sm text-primary font-bold">
+                                <Shield className="w-4 h-4" />
+                                {lead.service_name}
+                            </div>
                         </div>
                         <Button
                             variant="ghost"
@@ -99,18 +97,8 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                     </div>
 
                     <div className="flex items-center gap-2 text-[11px] font-bold tracking-tight text-muted-foreground/40">
-                        <span className="text-muted-foreground/20 font-light">|</span>
-                        {lead.service ? lead.service.split(',').map((s: string, i: number) => (
-                            <div key={i} className="flex items-center gap-2">
-                                <span className="text-foreground/80">{s.trim().toUpperCase()}</span>
-                                <span className="text-muted-foreground/20 font-light">|</span>
-                            </div>
-                        )) : <span className="text-foreground/80">NO SERVICES |</span>}
+                        <span className="text-foreground/80">{lead.service_name.toUpperCase()} PIPELINE</span>
                     </div>
-
-                    <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em]">
-                        Lead created on: {formatDate(lead.created_at)}
-                    </p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
@@ -119,7 +107,7 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                         <div className="p-6 bg-zinc-900 dark:bg-zinc-100 flex items-center justify-between">
                             <div className="flex items-center gap-2 text-xs font-bold text-white dark:text-zinc-900 uppercase tracking-widest">
                                 <UserIcon className="w-3.5 h-3.5" />
-                                <span>Client identity</span>
+                                <span>Service Details</span>
                             </div>
                         </div>
 
@@ -136,13 +124,17 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-start text-xs text-muted-foreground">
-                                        <span className="font-medium">Insurance</span>
+                                        <span className="font-medium">Status</span>
                                         <Badge variant="outline" className={cn(
                                             "font-black text-[10px] px-2 py-0 h-5 border-none",
-                                            lead.is_converted ? "bg-green-500/10 text-green-600" : "bg-zinc-100 dark:bg-zinc-800 text-foreground"
+                                            lead.status === 'Closed' ? "bg-green-500/10 text-green-600" : "bg-zinc-100 dark:bg-zinc-800 text-foreground"
                                         )}>
-                                            {lead.is_converted ? 'CONVERTED' : 'PENDING'}
+                                            {lead.status.toUpperCase()}
                                         </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-start text-xs text-muted-foreground">
+                                        <span className="font-medium">Coverage</span>
+                                        <span className="font-black text-foreground">{lead.coverage || "N/A"}</span>
                                     </div>
                                 </div>
                             </div>
@@ -151,14 +143,14 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                             <div className="space-y-4 pt-4 border-t border-border/50">
                                 <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
                                     <Calendar className="w-3.5 h-3.5" />
-                                    <span>Schedule & Timeline</span>
+                                    <span>Schedule</span>
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-start text-xs text-muted-foreground">
-                                        <span className="font-medium">Appointment</span>
-                                        <span className="font-black text-foreground font-mono text-right">{formatDate(lead.date || lead.meeting_date)}</span>
+                                        <span className="font-medium">Discussion</span>
+                                        <span className="font-black text-foreground font-mono text-right">{formatDate(lead.discussion_date)}</span>
                                     </div>
-                                    {!lead.is_converted && lead.follow_up_date && (
+                                    {lead.status !== 'Closed' && lead.follow_up_date && (
                                         <div className="flex justify-between items-start text-xs text-muted-foreground">
                                             <span className="font-medium">Follow-up</span>
                                             <span className="font-black text-foreground font-mono text-right">{formatDate(lead.follow_up_date)}</span>
@@ -166,47 +158,10 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                                     )}
                                 </div>
                             </div>
-
-                            {/* Section: Advisors */}
-                            <div className="space-y-4 pt-4 border-t border-border/50">
-                                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                    <Users className="w-3.5 h-3.5" />
-                                    <span>Assigned advisors</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {lead.agent_ids?.length ? lead.agent_ids.map(id => {
-                                        const user = users.find(u => u.id === id);
-                                        return (
-                                            <Badge key={id} variant="secondary" className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-foreground border-border/50">
-                                                {user?.name || `ID-${id}`}
-                                            </Badge>
-                                        );
-                                    }) : (
-                                        <p className="text-[11px] font-medium text-muted-foreground italic">No advisors assigned.</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Section: Overview */}
-                            <div className="space-y-4 pt-4 border-t border-border/50">
-                                <div className="p-3 bg-zinc-900 dark:bg-zinc-100 rounded-xl mb-4">
-                                    <div className="flex items-center justify-between text-xs font-bold text-white dark:text-zinc-900 uppercase tracking-widest">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="w-3.5 h-3.5" />
-                                            <span>Case Overview</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="bg-zinc-50 dark:bg-zinc-800/40 p-3 rounded-xl border border-border/50 border-dashed">
-                                    <p className="text-xs font-medium leading-relaxed text-muted-foreground/80 italic">
-                                        "{lead.description || "No account notes provided for this record."}"
-                                    </p>
-                                </div>
-                            </div>
                         </div>
                     </Card>
 
-                    {/* Recent Logs Section: Conversion Timeline style */}
+                    {/* Recent Logs Section */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between pb-1">
                             <h3 className="text-xl font-bold flex items-center gap-2">
@@ -235,7 +190,7 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                                         <div key={update.id} className="relative pl-12 transition-all hover:translate-x-0.5 group">
                                             {/* Dot & Horizontal Connector */}
                                             <div className="absolute left-0 top-3 flex items-center justify-center w-8 h-8 z-10">
-                                                <div className="w-4 h-4 rounded-full bg-primary ring-[5px] ring-white dark:ring-zinc-950 shadow-xl shadow-primary/30" />
+                                                <div className="w-4 h-4 rounded-full bg-primary ring-[5px] ring-white dark:ring-zinc-900 shadow-xl shadow-primary/30" />
                                                 <div className="absolute left-4 w-8 h-[2px] bg-zinc-300 dark:bg-zinc-700" />
                                             </div>
 
@@ -251,7 +206,7 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <p className="text-xs font-semibold leading-relaxed text-foreground/90">
+                                                <p className="text-xs font-semibold leading-relaxed text-foreground/90 whitespace-pre-wrap">
                                                     {update.content}
                                                 </p>
                                             </div>
@@ -269,17 +224,17 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                         onClick={() => onEdit(lead)}
                         className="text-sm font-black uppercase tracking-widest hover:underline transition-all text-primary"
                     >
-                        Edit Lead Details
+                        Edit Service
                     </button>
                     <Button
                         variant="outline"
                         onClick={() => {
                             onClose();
-                            router.push(`/dashboard/leads/${lead.id}`);
+                            router.push(`/dashboard/leads/${lead.lead_id}?serviceId=${lead.service_id}`);
                         }}
                         className="h-12 px-8 rounded-xl font-bold border-border bg-white dark:bg-zinc-900 text-xs uppercase tracking-widest hover:bg-secondary/50 transition-all shadow-sm active:scale-95 text-primary"
                     >
-                        Add Activity
+                        View Full Details
                     </Button>
                 </div>
             </div>

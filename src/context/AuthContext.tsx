@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -8,7 +9,8 @@ import { supabase } from "@/lib/supabase";
  */
 type AuthContextType = {
   token: string | null;
-  user: any | null;
+  user: any | null; // Keeping user as any for flexibility or should be User?
+  role: 'admin' | 'user' | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: { name?: string }) => Promise<void>;
@@ -31,6 +33,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
+  const [role, setRole] = useState<'admin' | 'user' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,9 +44,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("[AuthContext] Initializing auth state...");
       try {
         // Retrieve existing session from storage/cookies via Supabase helper
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: { session } } = await (supabase.auth as any).getSession();
         setToken(session?.access_token || null);
         setUser(session?.user || null);
+
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          setRole(profile?.role || 'user');
+        }
+
         console.log("[AuthContext] Initial session check complete. Authenticated:", !!session?.access_token);
       } catch (error) {
         console.error('[AuthContext] Error getting initial session:', error);
@@ -64,6 +78,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log(`[AuthContext] Auth State Change: ${event}`);
       setToken(session?.access_token || null);
       setUser(session?.user || null);
+
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setRole(data?.role || 'user'));
+      } else {
+        setRole(null);
+      }
     });
 
     // Cleanup subscription on unmount
@@ -131,8 +156,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     console.warn("[AuthContext] Logging out user...");
     await (supabase.auth as any).signOut();
+    await (supabase.auth as any).signOut();
     setToken(null);
     setUser(null);
+    setRole(null);
     console.log("[AuthContext] User logged out, session cleared.");
   };
 
@@ -141,6 +168,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         token,
         user,
+        role,
         login,
         logout,
         updateProfile,

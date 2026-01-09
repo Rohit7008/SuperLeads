@@ -1,22 +1,58 @@
 import { api } from "./api";
 
 /**
- * Lead Types Definition
+ * Lead (Client Profile) - Represents the Person/Entity
  */
 export type Lead = {
   id: number;
   name: string;
   phone_number: string;
-  service: string;
+  service_deprecated?: string; // Kept for legacy if needed, but we use lead_services now
   description?: string;
-  date?: string;
-  meeting_date?: string; // UI compatibility field
-  follow_up_date?: string;
-  status: string;
-  created_by: string;
-  agent_ids?: string[];
   is_converted?: boolean;
   created_at?: string;
+  created_by?: string;
+  agent_ids?: string[];
+};
+
+/**
+ * Lead Service - Represents a specific interaction/deal
+ */
+export type LeadService = {
+  id: number;
+  lead_id: number;
+  service_name: string;
+  coverage?: string;
+  premium_investment?: number;
+  status: string;
+  discussion_date?: string;
+  follow_up_date?: string;
+  created_at: string;
+  updated_at?: string;
+  created_by?: string;
+  // Join fields
+  leads?: Lead;
+};
+
+/**
+ * UI Projection - Flattened Row for the Data Grid
+ */
+export type LeadRow = {
+  // Service ID (Primary Key for the row in the UI table)
+  service_id: number;
+  // Lead/Client Details
+  lead_id: number;
+  client_name: string;
+  phone_number: string;
+  // Service Details
+  service_name: string;
+  coverage: string;
+  premium_investment: number;
+  status: string;
+  discussion_date: string;
+  follow_up_date: string;
+  date: string; // Creation timestamp
+  created_by: string;
 };
 
 export type LeadUpdate = {
@@ -31,102 +67,98 @@ export type LeadUpdate = {
     email: string;
   };
   created_by_name?: string;
+  service_id?: number;
 };
 
 export type CreateLeadPayload = {
+  // Client Data
   name: string;
   phone_number: string;
-  service: string;
   description?: string;
-  date?: string;
-  follow_up_date?: string;
-  status?: string;
-  is_converted?: boolean;
   agent_ids?: string[];
+
+  // Service Data (Initial Service)
+  service_name: string;
+  coverage?: string;
+  premium_investment?: number;
+  status?: string;
+  discussion_date?: string;
+  follow_up_date?: string;
+  is_converted?: boolean;
+  created_by_name?: string;
 };
 
 /**
- * Fetch all leads
- * @returns Array of Lead objects
- * Performance: Optimized to return raw data for React Query caching.
+ * Fetch all lead services (Flattened for Data Grid)
  */
-export const getLeads = async (): Promise<Lead[]> => {
-  const res = await api.get("/leads");
+export const getLeads = async (params?: { all?: boolean }): Promise<LeadRow[]> => {
+  const url = params?.all ? "/leads?all=true" : "/leads";
+  const res = await api.get(url);
   return res.data;
 };
 
 /**
- * Create a new lead
- * @param data Form data matching CreateLeadPayload
+ * Create a new lead (Client + Initial Service)
  */
-export const createLead = async (data: any) => {
-  const payload: CreateLeadPayload = {
-    name: data.name,
-    phone_number: data.phone_number,
-    service: data.service,
-    description: data.description,
-    date: data.meeting_date || data.date,
-    follow_up_date: data.follow_up_date,
-    status: data.status || 'New',
-    is_converted: data.is_converted || false,
-    agent_ids: data.agent_ids || [],
-  };
-
-  const res = await api.post("/leads", payload);
+export const createLead = async (data: CreateLeadPayload) => {
+  const res = await api.post("/leads", data);
   return res.data;
 };
 
 /**
- * Update an existing lead
- * @param id Lead primary key
- * @param data Partial lead data to update
+ * Update a specific Lead Service
  */
-export const updateLead = async (id: number, data: any) => {
-  const payload: Partial<CreateLeadPayload> = {};
-  if (data.name) payload.name = data.name;
-  if (data.phone_number) payload.phone_number = data.phone_number;
-  if (data.service) payload.service = data.service;
-  if (data.description !== undefined) payload.description = data.description;
-  if (data.meeting_date || data.date) payload.date = data.meeting_date || data.date;
-  if (data.follow_up_date !== undefined) payload.follow_up_date = data.follow_up_date;
-  if (data.status) payload.status = data.status;
-  if (data.is_converted !== undefined) payload.is_converted = data.is_converted;
-  if (data.agent_ids !== undefined) payload.agent_ids = data.agent_ids;
-  if (data.updated_by_name) (payload as any).updated_by_name = data.updated_by_name;
-
-
-  const res = await api.put(`/leads/${id}`, payload);
+export const updateLeadService = async (serviceId: number, data: Partial<LeadService>) => {
+  // Note: We'll likely need to separate Client updates from Service updates in the API eventually
+  // For now, this assumes we are editing the service properties.
+  const res = await api.put(`/leads/services/${serviceId}`, data);
   return res.data;
 };
 
 /**
- * Delete a lead
- * @param id Lead primary key
+ * Delete a lead service
  */
-export const deleteLead = async (id: number) => {
-  await api.delete(`/leads/${id}`);
+export const deleteLeadService = async (serviceId: number) => {
+  await api.delete(`/leads/services/${serviceId}`);
 };
 
 /**
- * Fetch a single lead by ID
+ * Get Client with all their Services
  */
-export const getLead = async (id: string): Promise<Lead> => {
-  const res = await api.get(`/leads/${id}`);
+export const getClientDetails = async (clientId: string) => {
+  const res = await api.get(`/leads/client/${clientId}`);
   return res.data;
 };
 
 /**
- * Fetch updates for a lead
+ * Get a specific Service Detail
  */
-export const getLeadUpdates = async (id: string): Promise<LeadUpdate[]> => {
-  const res = await api.get(`/leads/${id}/updates`);
+export const getServiceDetails = async (serviceId: string) => {
+  const res = await api.get(`/leads/services/${serviceId}`);
   return res.data;
 };
 
 /**
- * Add an update/note to a lead
+ * Fetch updates for a lead (Client Level or Filtered by Service)
  */
-export const addLeadUpdate = async (id: string, content: string, type: string = 'Note', created_by_name?: string) => {
-  const res = await api.post(`/leads/${id}/updates`, { content, type, created_by_name });
+export const getLeadUpdates = async (clientId: string, serviceId?: string): Promise<LeadUpdate[]> => {
+  const url = serviceId ? `/leads/${clientId}/updates?serviceId=${serviceId}` : `/leads/${clientId}/updates`;
+  const res = await api.get(url);
+  return res.data;
+};
+
+/**
+ * Add an update/note to a lead (Optionally linked to a specific service)
+ */
+export const addLeadUpdate = async (clientId: string, content: string, type: string = 'Note', created_by_name?: string, serviceId?: number) => {
+  const res = await api.post(`/leads/${clientId}/updates`, { content, type, created_by_name, service_id: serviceId });
+  return res.data;
+};
+
+/**
+ * Add new services to an existing lead
+ */
+export const addLeadServices = async (leadId: number, services: string[]) => {
+  const res = await api.post(`/leads/${leadId}/services`, { services });
   return res.data;
 };

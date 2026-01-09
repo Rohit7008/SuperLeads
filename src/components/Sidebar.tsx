@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Calendar, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { getLeads } from "@/lib/leads";
@@ -15,7 +15,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ mobile, onClose }: SidebarProps = {}) {
-  const { logout } = useAuth();
+  const { logout, role } = useAuth();
   const pathname = usePathname();
   const queryClient = useQueryClient();
 
@@ -23,7 +23,7 @@ export default function Sidebar({ mobile, onClose }: SidebarProps = {}) {
     if (href === "/dashboard/leads" || href === "/dashboard/calendar") {
       queryClient.prefetchQuery({
         queryKey: ["leads"],
-        queryFn: getLeads,
+        queryFn: () => getLeads({ all: true }),
         staleTime: 5 * 60 * 1000,
       });
     }
@@ -33,6 +33,7 @@ export default function Sidebar({ mobile, onClose }: SidebarProps = {}) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/leads", label: "Leads", icon: Users },
     { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+    ...(role === 'admin' ? [{ href: "/dashboard/admin", label: "Admin", icon: Shield }] : []),
   ];
 
   const profileLink = { href: "/dashboard/profile", label: "Profile", icon: Users };

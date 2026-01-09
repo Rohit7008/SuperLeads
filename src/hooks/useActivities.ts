@@ -12,6 +12,7 @@ export type Activity = {
         id: number;
         name: string;
         service: string;
+        phone_number: string;
     };
 };
 

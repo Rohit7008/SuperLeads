@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getLeads, deleteLead } from "@/lib/leads";
+import { getLeads, deleteLeadService } from "@/lib/leads";
 
 /**
  * useLeads Hook
@@ -7,20 +7,20 @@ import { getLeads, deleteLead } from "@/lib/leads";
  * Centralized hook for managing leads data.
  * Uses shared query key ['leads'] for efficient caching.
  */
-export function useLeads() {
+export function useLeads(params?: { all?: boolean }) {
     const queryClient = useQueryClient();
 
     // Query leads
     const query = useQuery({
-        queryKey: ["leads"],
-        queryFn: getLeads,
+        queryKey: ["leads", params?.all ? "all" : "mine"], // Diff keys for distinct caches
+        queryFn: () => getLeads(params),
         // Note: Global staleTime from Providers.tsx (5 mins) 
         // ensures we don't refetch unnecessarily on navigation.
     });
 
     // Delete mutation
     const deleteMutation = useMutation({
-        mutationFn: deleteLead,
+        mutationFn: deleteLeadService,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["leads"] });
         },

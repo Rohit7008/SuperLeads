@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { Lead } from "@/lib/leads";
+import { LeadRow } from "@/lib/leads";
 import { useLeads } from "@/hooks/useLeads";
 import { Card } from "@/components/ui/card";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
-import { ChevronLeft, ChevronRight, Loader2, Calendar as CalendarIcon, Clock, Phone } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Calendar as CalendarIcon, Clock, Phone, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Lazy load modals and sidebar
@@ -19,24 +19,22 @@ const EditLeadModal = dynamic(() => import("@/components/EditLeadModal"), {
     loading: () => null,
 });
 
-/**
- * Calendar Page - Redesigned Layout
- * 
- * Layout: Two-column design
- * - Left (65%): Compact calendar grid
- * - Right (35%): Today's meetings sidebar
- * 
- * Performance:
- * 1. React Query: Shares cached lead data
- * 2. useMemo: Optimized filtering for today's meetings
- * 3. Dynamic imports: Lazy load modals
- */
+type CalendarEvent = {
+    id: string; // Unique ID for key (serviceId + type)
+    date: Date;
+    type: 'Discussion' | 'FollowUp';
+    lead: LeadRow;
+};
+
 export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewingLead, setViewingLead] = useState<Lead | null>(null);
-    const [editingLead, setEditingLead] = useState<Lead | null>(null);
+    const [viewingLead, setViewingLead] = useState<LeadRow | null>(null);
+    const [editingLead, setEditingLead] = useState<LeadRow | null>(null);
 
     const { leads, isLoading, isFetching, refetch, deleteLead } = useLeads();
+
+    // Cast to LeadRow[] since our API now returns this structure
+    const rows = (leads || []) as unknown as LeadRow[];
 
     const handleDeleteLead = async (id: number) => {
         if (!window.confirm("Are you sure you want to delete this lead?")) return;
@@ -44,7 +42,7 @@ export default function CalendarPage() {
         setViewingLead(null);
     };
 
-    const handleEditFromSidebar = (lead: Lead) => {
+    const handleEditFromSidebar = (lead: LeadRow) => {
         setViewingLead(null);
         setEditingLead(lead);
     };
@@ -52,32 +50,47 @@ export default function CalendarPage() {
     /**
      * Calendar Logic (Memoized)
      */
-    const { days, groupedLeads, todayLeads } = useMemo(() => {
+    const { days, events } = useMemo(() => {
         const monthStart = startOfMonth(currentDate);
         const monthEnd = endOfMonth(currentDate);
         const intervalDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-        const today = startOfDay(new Date());
-        const leadsWithDates = Array.isArray(leads) ? leads.filter(l => l.meeting_date || l.date) : [];
+        // Generate Events List
+        const allEvents: CalendarEvent[] = [];
 
-        // Filter today's meetings
-        const todayMeetings = leadsWithDates.filter(lead => {
-            const dateStr = lead.meeting_date || lead.date;
-            if (!dateStr) return false;
-            const leadDate = new Date(dateStr);
-            return !isNaN(leadDate.getTime()) && isSameDay(leadDate, today);
-        }).sort((a, b) => {
-            const timeA = new Date(a.meeting_date || a.date || 0).getTime();
-            const timeB = new Date(b.meeting_date || b.date || 0).getTime();
-            return timeA - timeB;
+        rows.forEach(row => {
+            // Discussion Event
+            if (row.discussion_date) {
+                const date = new Date(row.discussion_date);
+                if (!isNaN(date.getTime())) {
+                    allEvents.push({
+                        id: `${row.service_id}-discussion`,
+                        date: date,
+                        type: 'Discussion',
+                        lead: row
+                    });
+                }
+            }
+
+            // Follow Up Event (Only if status is not closed, typically)
+            if (row.follow_up_date && row.status !== 'Closed') {
+                const date = new Date(row.follow_up_date);
+                if (!isNaN(date.getTime())) {
+                    allEvents.push({
+                        id: `${row.service_id}-followup`,
+                        date: date,
+                        type: 'FollowUp',
+                        lead: row
+                    });
+                }
+            }
         });
 
         return {
             days: intervalDays,
-            groupedLeads: leadsWithDates,
-            todayLeads: todayMeetings
+            events: allEvents
         };
-    }, [currentDate, leads]);
+    }, [currentDate, rows]);
 
     const nextMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -148,12 +161,9 @@ export default function CalendarPage() {
 
                     <div className="grid grid-cols-7 gap-px bg-zinc-200 dark:bg-zinc-800">
                         {days.map((day, i) => {
-                            const dayLeads = groupedLeads.filter(lead => {
-                                const dateStr = lead.meeting_date || lead.date;
-                                if (!dateStr) return false;
-                                const leadDate = new Date(dateStr);
-                                return !isNaN(leadDate.getTime()) && isSameDay(leadDate, day);
-                            });
+                            // Filter events for this day
+                            const dayEvents = events.filter(e => isSameDay(e.date, day))
+                                .sort((a, b) => a.date.getTime() - b.date.getTime());
 
                             const colStartClasses = ['', 'col-start-2', 'col-start-3', 'col-start-4', 'col-start-5', 'col-start-6', 'col-start-7'];
                             const colStart = i === 0 ? colStartClasses[day.getDay()] : '';
@@ -176,27 +186,29 @@ export default function CalendarPage() {
                                     )}>
                                         {format(day, 'd')}
                                     </div>
-                                    <div className="space-y-2">
-                                        {dayLeads.map(lead => {
-                                            const d = new Date(lead.meeting_date || lead.date || 0);
-                                            const timeStr = isNaN(d.getTime()) ? "--:--" : format(d, "HH:mm");
-
-                                            return (
-                                                <div
-                                                    key={lead.id}
-                                                    suppressHydrationWarning
-                                                    className="px-2 py-1.5 text-[10px] font-bold border-2 border-black dark:border-white bg-white dark:bg-zinc-900 rounded-none cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-between gap-2 overflow-hidden"
-                                                    onClick={() => setViewingLead(lead)}
-                                                >
+                                    <div className="space-y-1.5">
+                                        {dayEvents.map(event => (
+                                            <div
+                                                key={event.id}
+                                                className={cn(
+                                                    "px-2 py-1.5 text-[10px] font-bold border-2 rounded-none cursor-pointer hover:scale-[1.02] transition-all flex items-center justify-between gap-2 overflow-hidden",
+                                                    event.type === 'Discussion'
+                                                        ? "bg-white text-black border-black dark:bg-zinc-900 dark:text-white dark:border-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black"
+                                                        : "bg-amber-50 text-amber-900 border-amber-900/20 hover:bg-amber-100 hover:border-amber-900"
+                                                )}
+                                                onClick={() => setViewingLead(event.lead)}
+                                            >
+                                                <div className="flex items-center gap-1.5 truncate">
+                                                    {event.type === 'FollowUp' && <History className="w-3 h-3 shrink-0" />}
                                                     <span className="uppercase tracking-tighter truncate">
-                                                        {lead.name.split(' ')[0]}
-                                                    </span>
-                                                    <span className="opacity-50 text-[9px] shrink-0 font-mono">
-                                                        {timeStr}
+                                                        {event.lead.client_name.split(' ')[0]}
                                                     </span>
                                                 </div>
-                                            );
-                                        })}
+                                                <span className="opacity-50 text-[9px] shrink-0 font-mono">
+                                                    {format(event.date, "HH:mm")}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             );
@@ -205,7 +217,6 @@ export default function CalendarPage() {
                 </Card>
             </div>
 
-            {/* Sidebar instead of Modal */}
             {viewingLead && (
                 <LeadSidebar
                     lead={viewingLead}
@@ -225,7 +236,6 @@ export default function CalendarPage() {
                 />
             )}
 
-            {/* Background Revalidation Indicator */}
             {isFetching && !isLoading && (
                 <div className="fixed bottom-6 right-6 bg-primary text-primary-foreground px-5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-bottom-6 duration-500">
                     <Loader2 className="w-4 h-4 animate-spin" />

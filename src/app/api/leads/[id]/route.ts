@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -35,6 +36,7 @@ export async function GET(
 
         return NextResponse.json(data);
     } catch (error) {
+        // console.error... or just ignore unused var if really unused
         return NextResponse.json({ detail: "Failed to fetch lead" }, { status: 500 });
     }
 }
