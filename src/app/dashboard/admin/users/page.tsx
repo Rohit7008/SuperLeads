@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getUsers } from "@/lib/users";
-import { User } from "@/lib/users";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -13,7 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Shield, ShieldAlert, MoreHorizontal, User as UserIcon, Loader2 } from "lucide-react";
+import { Shield, MoreHorizontal, Loader2 } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -91,7 +90,6 @@ export default function UserManagementPage() {
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{user.name || "No Name"}</span>
-                                            <span className="text-[11px] text-zinc-500 font-medium">ID: {user.id.substring(0, 8)}...</span>
                                         </div>
                                     </div>
                                 </TableCell>

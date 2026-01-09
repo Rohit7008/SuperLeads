@@ -9,16 +9,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/card";
 import {
     Calendar,
-    Phone,
     User as UserIcon,
-    Users,
-    Clock,
-    FileText,
     X,
-    TrendingUp,
     History,
-    CheckCircle2,
-    Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

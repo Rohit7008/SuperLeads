@@ -27,10 +27,10 @@ export default function DashboardLayout({
 
   // Close mobile menu on route change
   useEffect(() => {
-    if (isMobileOpen) {
-      setTimeout(() => setIsMobileOpen(false), 0);
-    }
-  }, [pathname, isMobileOpen]);
+    // Wrap in setTimeout to avoid synchronous state update warning
+    const timer = setTimeout(() => setIsMobileOpen(false), 0);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   // ⛔ wait until auth check finishes and ensure authenticated
   if (loading || !isAuthenticated) return null;

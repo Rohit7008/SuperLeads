@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { updateLeadService, LeadRow } from "@/lib/leads";
+import { updateLeadService, addLeadUpdate, LeadRow } from "@/lib/leads";
 import { getUsers, User as AppUser } from "@/lib/users";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Input, Label } from "@/components/ui";
 
 import { DateTimePicker } from "./DateTimePicker";
 import { cn } from "@/lib/utils";
-import { User, Shield, IndianRupee, Loader2 } from "lucide-react";
+import { User, IndianRupee, Loader2, MessageSquare } from "lucide-react";
 import { SERVICE_LIST } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -49,12 +47,27 @@ export default function EditLeadModal({
     follow_up_date: lead.follow_up_date || "",
     description: "",
     created_by: lead.created_by || user?.id, // Default to current owner or current user
+    logEntry: "", // New field for Activity Log
   });
 
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (payload: { service_name: string; coverage?: string; premium_investment?: number; status: string; discussion_date?: string; follow_up_date?: string; created_by?: string }) => updateLeadService(lead.service_id, payload),
+    mutationFn: async (payload: { service_name: string; coverage?: string; premium_investment?: number; status: string; discussion_date?: string; follow_up_date?: string; created_by?: string }) => {
+      // 1. Update Service
+      await updateLeadService(lead.service_id, payload);
+
+      // 2. Add Log Entry if present
+      if (form.logEntry.trim()) {
+        await addLeadUpdate(
+          lead.lead_id.toString(),
+          form.logEntry,
+          'Note',
+          user?.name || 'Unknown',
+          lead.service_id
+        );
+      }
+    },
     onSuccess: () => {
       onSuccess();
       onClose();
@@ -84,9 +97,6 @@ export default function EditLeadModal({
       <SheetContent side="right" className="sm:max-w-md w-full p-0 flex flex-col border-l border-border bg-white dark:bg-zinc-950">
         <SheetHeader className="px-6 pt-5 border-b border-border bg-zinc-50/50 dark:bg-zinc-900/50 text-left">
           <SheetTitle className="text-lg font-bold tracking-tight text-foreground">Edit Service Entry</SheetTitle>
-          <SheetDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-            {lead.client_name} - {lead.service_name}
-          </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleUpdate} className="flex-1 flex flex-col overflow-hidden">
@@ -117,9 +127,9 @@ export default function EditLeadModal({
 
             {/* Service Details */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-1 pb-2 border-b border-dashed border-border/60">
-                <Shield className="w-3.5 h-3.5 text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Details</span>
+
+
+              <div className="flex items-center gap-2 mb-1 pb-2 border-b border-dashed border-border/60">                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Details</span>
               </div>
 
               {/* Assigned To - NEW FIELD */}
@@ -195,7 +205,27 @@ export default function EditLeadModal({
                   <option value="Lost">Lost</option>
                 </select>
               </div>
+
+              {/* Log Entry */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 mb-1">
+                  <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Add Log to Pipeline
+                  </Label>
+                </div>
+                <textarea
+                  className="min-h-[80px] w-full rounded-md border border-border bg-zinc-50 dark:bg-zinc-900/50 font-medium shadow-none focus-visible:ring-0 resize-none p-2"
+                  placeholder="Enter note or updates..."
+                  value={form.logEntry}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, logEntry: e.target.value })}
+                />
+              </div>
+
+
             </div>
+
+
 
 
             <div className="grid grid-cols-1 gap-4 pt-1">

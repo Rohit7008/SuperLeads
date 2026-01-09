@@ -5,8 +5,7 @@ import { getLeads, LeadRow } from "@/lib/leads";
 import { StatCard } from "@/components/admin/StatCard";
 import { RevenueChart } from "@/components/admin/RevenueChart";
 import { SalesCategoryChart } from "@/components/admin/SalesCategoryChart";
-import { Card, CardContent } from "@/components/ui/card";
-import { Check, User, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 type ChartView = 'revenue' | 'services' | 'status';
 
@@ -51,10 +49,6 @@ export default function AdminDashboard() {
 
     // 4. Net Profit
     const netProfit = totalRevenue * 0.6;
-
-    // 5. Action Items
-    const awaitingConfirmation = leadsData.filter(l => l.status === 'New').length;
-    const awaitingResponse = leadsData.filter(l => l.status === 'In Progress').length;
 
     // 6. Chart Data Logic
     let chartData: number[] = [];

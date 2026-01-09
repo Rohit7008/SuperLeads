@@ -154,7 +154,7 @@ export async function DELETE(request: Request) {
         // 3. Perform Reassignment & Deletion
         const adminSupabase = getAdminSupabase();
         if (!adminSupabase) {
-            return NextResponse.json({ detail: "Server misconfiguration: Service Role missing" }, { status: 500 });
+            return NextResponse.json({ detail: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY missing in .env.local" }, { status: 500 });
         }
 
         const adminId = currentUser.id;
@@ -179,6 +179,30 @@ export async function DELETE(request: Request) {
         if (servicesError) {
             console.error("[API /users DELETE] Failed to reassign services:", servicesError);
             return NextResponse.json({ detail: "Failed to reassign Data (Services): " + servicesError.message }, { status: 500 });
+        }
+
+        // C. Reassign Lead Updates (Activity Logs)
+        // This table references auth.users directly, so it MUST be reassigned before deleting the user.
+        const { error: updatesError } = await adminSupabase
+            .from("lead_updates")
+            .update({ created_by: adminId })
+            .eq("created_by", id);
+
+        if (updatesError) {
+            console.error("[API /users DELETE] Failed to reassign updates:", updatesError);
+            // We log but maybe don't block? No, if we don't reassign, delete will fail. So we must error out.
+            return NextResponse.json({ detail: "Failed to reassign Data (Updates): " + updatesError.message }, { status: 500 });
+        }
+
+        // D. Delete from Public Profiles (Required if no ON DELETE CASCADE)
+        const { error: profileDeleteError } = await adminSupabase
+            .from("profiles")
+            .delete()
+            .eq("id", id);
+
+        if (profileDeleteError) {
+            console.error("[API /users DELETE] Profile delete error:", profileDeleteError);
+            return NextResponse.json({ detail: "Failed to delete profile: " + profileDeleteError.message }, { status: 500 });
         }
 
         // C. Delete from Auth (Casacdes to Profiles usually)
