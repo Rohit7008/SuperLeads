@@ -213,7 +213,7 @@ export default function LeadsPage() {
       <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden shadow-sm">
         <div className="overflow-x-auto"> {/* Mobile Scroll Wrapper */}
           <Table>
-            <thead className="bg-zinc-50/50 dark:bg-zinc-900/50 text-xs uppercase text-muted-foreground font-semibold">
+            <thead className="bg-zinc-100 dark:bg-zinc-800 text-xs uppercase text-muted-foreground font-semibold">
               <tr>
                 <th className="px-4 py-3 font-bold tracking-wider whitespace-nowrap">Client</th>
                 <th className="px-4 py-3 font-bold tracking-wider whitespace-nowrap">Service Category</th>

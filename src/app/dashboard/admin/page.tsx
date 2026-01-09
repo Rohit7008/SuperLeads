@@ -119,7 +119,7 @@ export default function AdminDashboard() {
     });
 
     const categoryChartData = Object.entries(categoryCounts).map(([label, count], index) => {
-        const colors = ['#5D5FEF', '#F59E0B', '#10B981', '#F43F5E', '#8B5CF6'];
+        const colors = ['#000000', '#5D5FEF', '#FFB020', '#10B981', '#F43F5E', '#8B5CF6'];
         return {
             label,
             value: totalOrders > 0 ? Math.round((count / totalOrders) * 100) : 0,
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                     <Link href="/dashboard/admin/users">
-                        <Button size="sm" className="h-8 bg-[#5D5FEF] hover:bg-[#4B4ACD] text-white text-xs">
+                        <Button size="sm" className="h-8 bg-black hover:bg-zinc-800 text-white text-xs">
                             <Users className="w-3 h-3 mr-2" />
                             Manage Users
                         </Button>

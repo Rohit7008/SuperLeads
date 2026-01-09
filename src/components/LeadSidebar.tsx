@@ -82,7 +82,6 @@ export default function LeadSidebar({ lead, onClose, onEdit }: LeadSidebarProps)
                         <div className="space-y-1">
                             <h2 className="text-4xl font-black tracking-tighter text-foreground uppercase leading-none">{lead.client_name}</h2>
                             <div className="flex items-center gap-2 text-sm text-primary font-bold">
-                                <Shield className="w-4 h-4" />
                                 {lead.service_name}
                             </div>
                         </div>

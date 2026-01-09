@@ -36,12 +36,11 @@ export function RevenueChart({ data, labels, title = "Revenue", subTitle = "This
             {
                 data: data,
                 backgroundColor: (context) => {
-                    // If we want different colors for status, we could pass them, but keeping it simple/purple for now is consistent
-                    return '#5D5FEF';
+                    return '#000000';
                 },
                 borderRadius: 8,
                 barThickness: 32,
-                hoverBackgroundColor: '#4B4ACD',
+                hoverBackgroundColor: '#27272a',
             },
         ],
     };

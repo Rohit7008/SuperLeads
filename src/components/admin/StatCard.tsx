@@ -24,7 +24,7 @@ export function StatCard({
     return (
         <Card className={cn(
             "relative overflow-hidden transition-all duration-200 border-none shadow-sm",
-            isPrimary ? "bg-[#5D5FEF] text-white" : "bg-white text-zinc-950 hover:shadow-md",
+            isPrimary ? "bg-black text-white" : "bg-white text-zinc-950 hover:shadow-md",
             className
         )}>
             <div className="p-6 flex flex-col gap-1">

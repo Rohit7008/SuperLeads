@@ -73,12 +73,12 @@ export default function UserManagementPage() {
 
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-white dark:bg-zinc-950 shadow-sm">
                 <Table>
-                    <TableHeader className="bg-zinc-50/50 dark:bg-zinc-900/50">
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="font-semibold text-zinc-900 dark:text-zinc-100 pl-6">User</TableHead>
-                            <TableHead className="font-semibold text-zinc-900 dark:text-zinc-100">Email</TableHead>
-                            <TableHead className="font-semibold text-zinc-900 dark:text-zinc-100">Role</TableHead>
-                            <TableHead className="text-right font-semibold text-zinc-900 dark:text-zinc-100 pr-6">Actions</TableHead>
+                    <TableHeader className="bg-zinc-100 dark:bg-zinc-800">
+                        <TableRow className="hover:bg-transparent border-b border-zinc-200 dark:border-zinc-800">
+                            <TableHead className="font-bold text-xs uppercase text-muted-foreground tracking-wider pl-6 py-3">User</TableHead>
+                            <TableHead className="font-bold text-xs uppercase text-muted-foreground tracking-wider py-3">Email</TableHead>
+                            <TableHead className="font-bold text-xs uppercase text-muted-foreground tracking-wider py-3">Role</TableHead>
+                            <TableHead className="font-bold text-xs uppercase text-muted-foreground tracking-wider text-right pr-6 py-3">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -119,30 +119,26 @@ export default function UserManagementPage() {
                                                 <span className="sr-only">Open menu</span>
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-lg min-w-[160px]">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
+                                        <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-lg min-w-[160px] p-2">
+                                            <DropdownMenuLabel className="font-bold text-[10px] text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-1.5 rounded-sm mb-1 uppercase tracking-wider">Actions</DropdownMenuLabel>
                                             <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/admin/users/${user.id}`} className="cursor-pointer flex w-full items-center">
-                                                    <UserIcon className="mr-2 h-4 w-4" />
+                                                <Link href={`/dashboard/admin/users/${user.id}`} className="cursor-pointer flex w-full items-center px-2 py-1.5 rounded-sm text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">
                                                     <span>View Profile</span>
                                                 </Link>
                                             </DropdownMenuItem>
                                             {user.id !== "current_user_id_placeholder" && (
                                                 <>
                                                     {user.role !== 'admin' && (
-                                                        <DropdownMenuItem onClick={() => updateUserRole(user.id, 'admin')} className="cursor-pointer">
-                                                            <Shield className="mr-2 h-4 w-4 text-[#5D5FEF]" />
+                                                        <DropdownMenuItem onClick={() => updateUserRole(user.id, 'admin')} className="cursor-pointer px-2 py-1.5 rounded-sm text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">
                                                             <span>Make Admin</span>
                                                         </DropdownMenuItem>
                                                     )}
                                                     {user.role === 'admin' && (
-                                                        <DropdownMenuItem onClick={() => updateUserRole(user.id, 'user')} className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer">
-                                                            <ShieldAlert className="mr-2 h-4 w-4" />
+                                                        <DropdownMenuItem onClick={() => updateUserRole(user.id, 'user')} className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer px-2 py-1.5 rounded-sm text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">
                                                             <span>Remove Admin</span>
                                                         </DropdownMenuItem>
                                                     )}
-                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuSeparator className="my-1 bg-border" />
                                                     <DropdownMenuItem
                                                         onClick={(e) => {
                                                             e.preventDefault();
@@ -154,15 +150,8 @@ export default function UserManagementPage() {
                                                                     .catch(err => alert("Failed to delete user: " + (err.response?.data?.detail || err.message)));
                                                             }
                                                         }}
-                                                        className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
+                                                        className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer px-2 py-1.5 rounded-sm text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                                     >
-                                                        <UserIcon className="mr-2 h-4 w-4 rotate-180" />
-                                                        {/* Using UserIcon rotated as placeholder for delete user specific icon if Trash is not imported */}
-                                                        {/* Let's verify imports first or just use Trash if available. I see Trash is not imported. I'll stick to simple text or add Trash import if simple. 
-                                                           I'll check imports above. Only Shield, ShieldAlert, MoreHorizontal, User, Loader2 are imported.
-                                                           I will avoid adding new import to keep diff clean unless I do a separate step.
-                                                           I'll use what's available or just text.
-                                                        */}
                                                         <span>Delete User</span>
                                                     </DropdownMenuItem>
                                                 </>
